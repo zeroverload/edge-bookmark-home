@@ -230,6 +230,17 @@ body[data-mode="edit"] .folder-card {
   flex: 1;
 }
 
+.card-actions {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.card-delete-button {
+  height: 26px;
+  white-space: nowrap;
+}
+
 .card-title-input {
   width: 100%;
   margin: 0;
@@ -304,7 +315,7 @@ body[data-mode="edit"] .folder-card {
 
 .bookmark-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -397,15 +408,21 @@ body[data-mode="edit"] .bookmark-row[draggable="true"] {
   white-space: nowrap;
 }
 
+.bookmark-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .icon-button {
   height: 28px;
-  padding: 0 8px;
+  padding: 0 7px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -414,6 +431,12 @@ body[data-mode="edit"] .bookmark-row[draggable="true"] {
   background: var(--brown-soft);
   color: var(--brown-dark);
   outline: 0;
+}
+
+.danger-button:hover,
+.danger-button:focus-visible {
+  background: #f2d7ce;
+  color: #9a3324;
 }
 
 .edit-only {

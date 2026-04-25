@@ -10,3 +10,5 @@
 - Supports custom home title, card display names, card ordering, bookmark aliases, and tags.
 - Supports moving bookmarks between folder cards in edit mode.
 - Supports reordering bookmarks inside a card in edit mode.
+- Supports deleting bookmarks in edit mode with confirmation.
+- Supports deleting folder cards in edit mode with confirmation.

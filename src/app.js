@@ -130,6 +130,36 @@ function moveBookmark(bookmarkId, parentId, index) {
   });
 }
 
+function removeBookmark(bookmarkId) {
+  return new Promise((resolve, reject) => {
+    chrome.bookmarks.remove(bookmarkId, () => {
+      const error = chrome.runtime.lastError;
+
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+function removeBookmarkTree(bookmarkId) {
+  return new Promise((resolve, reject) => {
+    chrome.bookmarks.removeTree(bookmarkId, () => {
+      const error = chrome.runtime.lastError;
+
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
 function loadConfig() {
   return new Promise((resolve) => {
     chrome.storage.local.get(STORAGE_KEY, (result) => {
@@ -304,7 +334,21 @@ function createCard(card) {
   count.className = 'count-pill';
   count.textContent = `${card.bookmarks.length}`;
 
-  header.append(titleGroup, count);
+  const deleteButton = document.createElement('button');
+  deleteButton.className = 'icon-button danger-button card-delete-button edit-only';
+  deleteButton.type = 'button';
+  deleteButton.textContent = '删除卡片';
+  deleteButton.title = '删除这个收藏夹及其内部收藏';
+  deleteButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    handleCardDelete(card.id);
+  });
+
+  const cardActions = document.createElement('div');
+  cardActions.className = 'card-actions';
+  cardActions.append(count, deleteButton);
+
+  header.append(titleGroup, cardActions);
 
   const list = document.createElement('div');
   list.className = 'bookmark-list';
@@ -330,6 +374,7 @@ function createBookmarkRow(bookmark, card = null) {
   const tags = row.querySelector('.bookmark-tags');
   const url = row.querySelector('.bookmark-url');
   const editButton = row.querySelector('.bookmark-edit-button');
+  const deleteButton = row.querySelector('.bookmark-delete-button');
 
   row.draggable = state.isEditMode;
   row.dataset.bookmarkId = bookmark.id;
@@ -359,6 +404,8 @@ function createBookmarkRow(bookmark, card = null) {
 
   editButton.hidden = !state.isEditMode;
   editButton.addEventListener('click', () => openEditDialog(bookmark.id));
+  deleteButton.hidden = !state.isEditMode;
+  deleteButton.addEventListener('click', () => handleBookmarkDelete(bookmark.id));
 
   return row;
 }
@@ -734,6 +781,70 @@ async function handleBookmarkSave(event) {
   await saveConfig();
   closeEditDialog();
   refreshFromConfig();
+}
+
+async function handleBookmarkDelete(bookmarkId) {
+  if (!state.isEditMode) {
+    return;
+  }
+
+  const bookmark = state.allBookmarks.find((item) => item.id === bookmarkId);
+
+  if (!bookmark) {
+    return;
+  }
+
+  const shouldDelete = window.confirm(`确定要删除这个收藏吗？\n\n${bookmark.displayTitle}\n${bookmark.url}`);
+
+  if (!shouldDelete) {
+    return;
+  }
+
+  await removeBookmark(bookmarkId);
+  delete state.config.bookmarkMeta[bookmarkId];
+  await saveConfig();
+  await reloadBookmarks();
+}
+
+async function handleCardDelete(cardId) {
+  if (!state.isEditMode) {
+    return;
+  }
+
+  const card = state.cards.find((item) => item.id === cardId);
+
+  if (!card) {
+    return;
+  }
+
+  const isLooseCard = card.id.endsWith('-loose');
+  const message = isLooseCard
+    ? `确定要删除“${card.title}”中的 ${card.bookmarks.length} 个收藏吗？\n\n这个操作会删除这些真实浏览器收藏，但不会删除根收藏栏。`
+    : `确定要删除收藏夹“${card.title}”吗？\n\n其中的 ${card.bookmarks.length} 个收藏也会一起删除。`;
+  const shouldDelete = window.confirm(message);
+
+  if (!shouldDelete) {
+    return;
+  }
+
+  if (isLooseCard) {
+    await Promise.all(card.bookmarks.map((bookmark) => removeBookmark(bookmark.id)));
+  } else {
+    await removeBookmarkTree(card.parentId);
+  }
+
+  cleanupCardConfig(card);
+  await saveConfig();
+  await reloadBookmarks();
+}
+
+function cleanupCardConfig(card) {
+  delete state.config.cardAliases[card.id];
+  state.config.cardOrder = state.config.cardOrder.filter((cardId) => cardId !== card.id);
+
+  card.bookmarks.forEach((bookmark) => {
+    delete state.config.bookmarkMeta[bookmark.id];
+  });
 }
 
 function refreshFromConfig() {
