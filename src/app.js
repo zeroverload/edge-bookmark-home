@@ -109,9 +109,15 @@ function getBookmarkTree() {
   });
 }
 
-function moveBookmark(bookmarkId, parentId) {
+function moveBookmark(bookmarkId, parentId, index) {
+  const destination = { parentId };
+
+  if (Number.isInteger(index)) {
+    destination.index = index;
+  }
+
   return new Promise((resolve, reject) => {
-    chrome.bookmarks.move(bookmarkId, { parentId }, (bookmark) => {
+    chrome.bookmarks.move(bookmarkId, destination, (bookmark) => {
       const error = chrome.runtime.lastError;
 
       if (error) {
@@ -217,6 +223,7 @@ function normalizeBookmark(bookmark, folderPath) {
     displayTitle,
     folderPath,
     host,
+    index: bookmark.index,
     parentId: bookmark.parentId,
     tags,
     title,
@@ -308,14 +315,14 @@ function createCard(card) {
     emptyHint.textContent = '可把收藏拖到这里';
     list.append(emptyHint);
   } else {
-    list.append(...card.bookmarks.map(createBookmarkRow));
+    list.append(...card.bookmarks.map((bookmark) => createBookmarkRow(bookmark, card)));
   }
 
   article.append(header, list);
   return article;
 }
 
-function createBookmarkRow(bookmark) {
+function createBookmarkRow(bookmark, card = null) {
   const row = elements.rowTemplate.content.firstElementChild.cloneNode(true);
   const link = row.querySelector('.bookmark-link');
   const favicon = row.querySelector('.favicon');
@@ -326,7 +333,13 @@ function createBookmarkRow(bookmark) {
 
   row.draggable = state.isEditMode;
   row.dataset.bookmarkId = bookmark.id;
+  row.dataset.cardId = card?.id ?? '';
+  row.dataset.index = Number.isInteger(bookmark.index) ? String(bookmark.index) : '';
+  row.dataset.parentId = bookmark.parentId ?? '';
   row.addEventListener('dragstart', handleBookmarkDragStart);
+  row.addEventListener('dragover', handleBookmarkDragOver);
+  row.addEventListener('dragleave', handleBookmarkDragLeave);
+  row.addEventListener('drop', handleBookmarkDrop);
   row.addEventListener('dragend', handleBookmarkDragEnd);
   link.draggable = false;
   link.href = bookmark.url;
@@ -518,12 +531,60 @@ function handleBookmarkDragStart(event) {
   event.currentTarget.classList.add('is-dragging');
   event.dataTransfer.effectAllowed = 'move';
   event.dataTransfer.setData('application/x-bookmark-id', event.currentTarget.dataset.bookmarkId);
+  event.dataTransfer.setData('application/x-source-card-id', event.currentTarget.dataset.cardId);
   startAutoScroll();
 }
 
 function handleBookmarkDragEnd(event) {
   stopAutoScroll();
   event.currentTarget.classList.remove('is-dragging');
+  document.querySelectorAll('.bookmark-row').forEach((row) => {
+    row.classList.remove('is-row-drop-before', 'is-row-drop-after');
+  });
+}
+
+function handleBookmarkDragOver(event) {
+  if (!state.isEditMode) {
+    return;
+  }
+
+  const bookmarkId = event.dataTransfer.getData('application/x-bookmark-id');
+
+  if (!bookmarkId || bookmarkId === event.currentTarget.dataset.bookmarkId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  updateBookmarkDropPosition(event, event.currentTarget);
+}
+
+function handleBookmarkDragLeave(event) {
+  event.currentTarget.classList.remove('is-row-drop-before', 'is-row-drop-after');
+}
+
+async function handleBookmarkDrop(event) {
+  if (!state.isEditMode) {
+    return;
+  }
+
+  const sourceBookmarkId = event.dataTransfer.getData('application/x-bookmark-id');
+  const targetBookmarkId = event.currentTarget.dataset.bookmarkId;
+
+  if (!sourceBookmarkId || !targetBookmarkId || sourceBookmarkId === targetBookmarkId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.classList.remove('is-row-drop-before', 'is-row-drop-after');
+
+  await moveBookmarkNearBookmark(sourceBookmarkId, targetBookmarkId, isAfterBookmarkMidline(event, event.currentTarget));
+}
+
+function updateBookmarkDropPosition(event, rowElement) {
+  rowElement.classList.toggle('is-row-drop-before', !isAfterBookmarkMidline(event, rowElement));
+  rowElement.classList.toggle('is-row-drop-after', isAfterBookmarkMidline(event, rowElement));
 }
 
 function handleWindowDragOver(event) {
@@ -592,6 +653,30 @@ function isAfterCardMidline(event, cardElement) {
   }
 
   return event.clientX > rect.left + rect.width / 2 || event.clientY > rect.top + rect.height * 0.72;
+}
+
+function isAfterBookmarkMidline(event, rowElement) {
+  const rect = rowElement.getBoundingClientRect();
+
+  return event.clientY > rect.top + rect.height / 2;
+}
+
+async function moveBookmarkNearBookmark(sourceBookmarkId, targetBookmarkId, shouldInsertAfter) {
+  const sourceBookmark = state.allBookmarks.find((item) => item.id === sourceBookmarkId);
+  const targetBookmark = state.allBookmarks.find((item) => item.id === targetBookmarkId);
+
+  if (!sourceBookmark || !targetBookmark || !targetBookmark.parentId || !Number.isInteger(targetBookmark.index)) {
+    return;
+  }
+
+  let destinationIndex = shouldInsertAfter ? targetBookmark.index + 1 : targetBookmark.index;
+
+  if (sourceBookmark.parentId === targetBookmark.parentId && sourceBookmark.index < destinationIndex) {
+    destinationIndex -= 1;
+  }
+
+  await moveBookmark(sourceBookmarkId, targetBookmark.parentId, destinationIndex);
+  await reloadBookmarks();
 }
 
 async function moveBookmarkToCard(bookmarkId, targetParentId) {

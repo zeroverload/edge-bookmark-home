@@ -328,6 +328,14 @@ body[data-mode="edit"] .bookmark-row[draggable="true"] {
   opacity: 0.55;
 }
 
+.bookmark-row.is-row-drop-before {
+  box-shadow: inset 0 3px 0 var(--brown);
+}
+
+.bookmark-row.is-row-drop-after {
+  box-shadow: inset 0 -3px 0 var(--brown);
+}
+
 .bookmark-link {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) minmax(0, 86px) minmax(52px, 90px);
