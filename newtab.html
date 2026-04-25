@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>收藏主页</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Bookmark Home</p>
+          <input id="homeTitleInput" class="home-title-input" type="text" value="我的收藏主页" aria-label="主页标题" readonly />
+          <p class="subtitle">右上角切换编辑模式后，可以改标题、拖动卡片、移动收藏和编辑标签。</p>
+        </div>
+        <div class="status-card" aria-live="polite">
+          <span id="bookmarkCount">读取中...</span>
+          <button id="modeToggleButton" class="mode-toggle" type="button" aria-pressed="false">
+            <span id="modeLabel">只读模式</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="search-panel" aria-label="搜索收藏夹">
+        <label class="search-label" for="searchInput">搜索收藏</label>
+        <div class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="输入标题、网址或文件夹名..." autocomplete="off" />
+        </div>
+      </section>
+
+      <section id="emptyState" class="empty-state" hidden>
+        <h2>没有找到收藏</h2>
+        <p>换一个关键词试试，或检查 Edge 是否已授权读取收藏夹。</p>
+      </section>
+
+      <section id="resultsSection" class="results-section" hidden>
+        <div class="section-heading">
+          <h2>搜索结果</h2>
+          <span id="resultCount"></span>
+        </div>
+        <div id="resultsList" class="results-list"></div>
+      </section>
+
+      <section id="cardsGrid" class="cards-grid" aria-label="收藏夹卡片"></section>
+    </main>
+
+    <template id="bookmarkRowTemplate">
+      <div class="bookmark-row">
+        <a class="bookmark-link" target="_blank" rel="noreferrer">
+          <img class="favicon" alt="" />
+          <span class="bookmark-title"></span>
+          <span class="bookmark-tags"></span>
+          <span class="bookmark-url"></span>
+        </a>
+        <button class="icon-button bookmark-edit-button" type="button">编辑</button>
+      </div>
+    </template>
+
+    <div id="editDialog" class="dialog-backdrop" hidden>
+      <form id="editForm" class="dialog" role="dialog" aria-modal="true" aria-labelledby="editDialogTitle">
+        <h2 id="editDialogTitle">编辑收藏信息</h2>
+        <p id="editOriginalTitle" class="dialog-subtitle"></p>
+        <label>
+          别名
+          <input id="aliasInput" type="text" placeholder="例如：React 官方文档" />
+        </label>
+        <label>
+          用途标签
+          <input id="tagsInput" type="text" placeholder="用逗号或空格分隔，例如：前端 文档 常用" />
+        </label>
+        <div class="dialog-actions">
+          <button id="cancelEditButton" class="ghost-button" type="button">取消</button>
+          <button class="primary-button" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+
+    <script src="src/app.js"></script>
+  </body>
+</html>
