@@ -2,6 +2,13 @@
 
 Bookmark Home 是一个本地优先的 Edge 浏览器扩展，把新标签页变成收藏夹卡片主页。它可以按卡片展示收藏夹，支持搜索、别名、用途标签、卡片排序，以及在编辑模式下移动收藏到其它收藏夹。
 
+## 效果展示
+- 只读模式
+![alt text](image.png)
+- 编辑模式
+![alt text](image-1.png)
+![alt text](image-2.png)
+
 
 ## Features
 
@@ -115,9 +122,3 @@ node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))"
 - 没有扩大权限范围，除非 README 和隐私说明同步解释原因。
 - `src/app.js` 可以通过语法检查。
 
-## 效果展示
-- 只读模式
-![alt text](image.png)
-- 编辑模式
-![alt text](image-1.png)
-![alt text](image-2.png)
